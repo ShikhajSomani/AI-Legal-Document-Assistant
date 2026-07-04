@@ -1,12 +1,14 @@
 import streamlit as st
 import os
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.vectorstores import Chroma
-from langchain_community.document_loaders import PyPDFLoader
+import tempfile
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
+from backend.loader_splitter import load_pdf
+from backend.loader_splitter import split_document
+from backend.vector_store import get_embeddings
+from backend.vector_store import create_vectors
+from backend.rag import create_retriever
+from backend.rag import ask_question
 
 load_dotenv()
 
@@ -20,69 +22,33 @@ llm = ChatGoogleGenerativeAI(
     temperature=0
 )
 
-file = "C:\\Users\\Shikhaj Somani\\OneDrive\\Desktop\\GenAI\\AI Legal Document Assistant\\data\\doc.pdf"
+uploaded_file = st.file_uploader(
+    "Upload the pdf",
+    type=["pdf"]
+)
 
-if file:
-    pdf_reader = PyPDFLoader(file)
-    docs = pdf_reader.load()
-    
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200
-    )
-    
-    final_documents = text_splitter.split_documents(docs)
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2",
-        google_api_key=gemini_api
-    )
-    
-    vectors = Chroma.from_documents(
-        documents=final_documents,
-        embedding=embeddings,
-        persist_directory="./chroma_db"
-    )
-    st.success("Vectors created successfully!")
-    
-    retriever = vectors.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k":4}
-    )
+if uploaded_file:
+    if "current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name:
 
-    prompt = ChatPromptTemplate.from_template(
-        """
-        You are an helpful AI assistant
-        Answer the user's question ONLY using the context provided.
-        <context>
-        {context}
-        </context>
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+            temp.write(uploaded_file.read())
+            file = temp.name
 
-        Question:
-        {question}
+        docs = load_pdf(file)
+        final_docs = split_document(docs)
+        embeddings = get_embeddings()
+        create_vectors(final_docs, embeddings)
 
-        If the answer is not found in the context, then reply:
-        "I couldn't find the information in the uploaded document"
+        st.session_state.current_file = uploaded_file.name
+        st.success("Document processed successfully!")
 
-        Give clear and concise answers.
-        """
-    )
+if "vector_store" in st.session_state:
+    retriever = create_retriever()
 
     question = st.text_input("Ask any question related to the uploaded document?")
 
     if question:
-        retrieved_docs = retriever.invoke(question)
-
-        context = "\n\n".join(
-            doc.page_content
-            for doc in retrieved_docs
-        )
-
-        formatted_prompt = prompt.format(
-            context=context,
-            question=question
-        )
-
-        response = llm.invoke(formatted_prompt)
-
         st.subheader("Answer:")
-        st.write(response.content)
+        with st.spinner("Thinking..."):
+            response = ask_question(question, retriever, llm)
+        st.write(response)

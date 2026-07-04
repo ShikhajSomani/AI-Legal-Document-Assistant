@@ -2,6 +2,8 @@
 
 An AI-powered document assistant that allows users to upload PDF legal documents, index them, and ask questions. It uses Retrieval-Augmented Generation (RAG) powered by Google Gemini Models (`gemini-2.5-flash` and `gemini-embedding-2`) and a Chroma vector database.
 
+🌐 **Live Demo**: [Deploy Link](https://share.streamlit.io/) *(Replace with your actual deployed Streamlit URL)*
+
 ---
 
 ## 🚀 Features
