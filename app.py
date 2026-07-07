@@ -12,43 +12,44 @@ from backend.rag import ask_question
 
 load_dotenv()
 
-gemini_api = os.getenv('GEMINI_API_KEY')
-
 st.title("AI Legal Document Assistant")
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    google_api_key=gemini_api,
-    temperature=0
-)
+gemini_api = st.text_input("Enter your api key", type="password")
 
-uploaded_file = st.file_uploader(
-    "Upload the pdf",
-    type=["pdf"]
-)
+if gemini_api:
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=gemini_api,
+        temperature=0
+    )
 
-if uploaded_file:
-    if "current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name:
+    uploaded_file = st.file_uploader(
+        "Upload the pdf",
+        type=["pdf"]
+    )
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-            temp.write(uploaded_file.read())
-            file = temp.name
+    if uploaded_file:
+        if "current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name:
 
-        docs = load_pdf(file)
-        final_docs = split_document(docs)
-        embeddings = get_embeddings()
-        create_vectors(final_docs, embeddings)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
+                temp.write(uploaded_file.read())
+                file = temp.name
 
-        st.session_state.current_file = uploaded_file.name
-        st.success("Document processed successfully!")
+            docs = load_pdf(file)
+            final_docs = split_document(docs)
+            embeddings = get_embeddings()
+            create_vectors(final_docs, embeddings)
 
-if "vector_store" in st.session_state:
-    retriever = create_retriever()
+            st.session_state.current_file = uploaded_file.name
+            st.success("Document processed successfully!")
 
-    question = st.text_input("Ask any question related to the uploaded document?")
+    if "vector_store" in st.session_state:
+        retriever = create_retriever()
 
-    if question:
-        st.subheader("Answer:")
-        with st.spinner("Thinking..."):
-            response = ask_question(question, retriever, llm)
-        st.write(response)
+        question = st.text_input("Ask any question related to the uploaded document?")
+
+        if question:
+            st.subheader("Answer:")
+            with st.spinner("Thinking..."):
+                response = ask_question(question, retriever, llm)
+            st.write(response)
