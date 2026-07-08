@@ -25,23 +25,29 @@ if gemini_api:
 
     uploaded_file = st.file_uploader(
         "Upload the pdf",
-        type=["pdf"]
+        type=["pdf"],
+        accept_multiple_files=True
     )
 
     if uploaded_file:
-        if "current_file" not in st.session_state or st.session_state.current_file != uploaded_file.name:
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp:
-                temp.write(uploaded_file.read())
-                file = temp.name
+        all_docs = []
 
-            docs = load_pdf(file)
+        for file in uploaded_file:
+            temppdf = f"./temp.pdf"
+            with open(temppdf, "wb") as f:
+                f.write(file.getvalue())
+                f_name = file.name
+
+            docs = load_pdf(temppdf)
             final_docs = split_document(docs)
-            embeddings = get_embeddings()
-            create_vectors(final_docs, embeddings)
+            all_docs.extend(final_docs)
 
-            st.session_state.current_file = uploaded_file.name
-            st.success("Document processed successfully!")
+        embeddings = get_embeddings()
+        create_vectors(all_docs, embeddings)
+
+        st.session_state.current_file = f_name
+        st.success("Document processed successfully!")
 
     if "vector_store" in st.session_state:
         retriever = create_retriever()
