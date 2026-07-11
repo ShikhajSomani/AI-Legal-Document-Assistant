@@ -14,7 +14,7 @@ load_dotenv()
 
 st.title("AI Legal Document Assistant")
 
-gemini_api = st.text_input("Enter your api key", type="password")
+gemini_api = os.getenv('GEMINI_API_KEY')
 
 if gemini_api:
     llm = ChatGoogleGenerativeAI(
