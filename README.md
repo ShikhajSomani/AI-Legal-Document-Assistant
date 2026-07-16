@@ -1,6 +1,6 @@
 # AI Legal Document Assistant
 
-An AI-powered document assistant that allows users to upload PDF legal documents, index them, and ask questions. It uses Retrieval-Augmented Generation (RAG) powered by Google Gemini Models (`gemini-2.5-flash` and `gemini-embedding-2`) and a Chroma vector database.
+An AI-powered conversational document assistant that allows users to upload PDF legal documents, index them, and hold interactive chat sessions. It leverages Retrieval-Augmented Generation (RAG) powered by Google Gemini Models (`gemini-2.5-flash` and `gemini-embedding-2`) and a Chroma vector database.
 
 🌐 **Live Demo**: [Streamlit Live Link](https://ai-legal-document-assistant-behnsscuphkyj8nxxl4uju.streamlit.app/)
 
@@ -8,11 +8,14 @@ An AI-powered document assistant that allows users to upload PDF legal documents
 
 ## 🚀 Features
 
-*   **PDF Upload & Parsing**: Easily upload any PDF document directly through the Streamlit interface.
-*   **Intelligent Text Chunking**: Automatically processes, splits, and overlaps document text for optimal retrieval accuracy.
-*   **Vector Search & Indexing**: Uses Chroma DB to store and search text chunk embeddings.
-*   **Maximal Marginal Relevance (MMR) Retrieval**: Fetches the most relevant, diverse context chunks to provide comprehensive answers.
-*   **Context-Bound Question Answering**: Instructs Google Gemini to answer questions *strictly* using the uploaded context, ensuring trust and minimizing hallucinations.
+* **Interactive Chat Interface**: A native Streamlit chat UI that displays full conversation history with custom role styling.
+* **Conversational Memory**: Retains the context of prior messages in the active session to support follow-up questions.
+* **Contextual Question Rewriting**: Uses a dedicated query-rewriter prompt with Gemini to translate conversational queries (e.g., resolving pronouns like "it", "this", or "that") into standalone search questions.
+* **PDF Upload & Parsing**: Easily upload any PDF document directly through the Streamlit interface.
+* **Intelligent Text Chunking**: Automatically processes, splits, and overlaps document text for optimal retrieval accuracy using LangChain splitters.
+* **Vector Search & Indexing**: Uses Chroma DB to store and search text chunk embeddings.
+* **Maximal Marginal Relevance (MMR) Retrieval**: Fetches the most relevant yet diverse context chunks to provide comprehensive answers.
+* **Context-Bound Question Answering**: Instructs Google Gemini to answer questions *strictly* using the provided context, ensuring trust and minimizing hallucinations.
 
 ---
 
@@ -22,7 +25,7 @@ An AI-powered document assistant that allows users to upload PDF legal documents
 | :--- | :--- | :--- |
 | **Frontend UI** | [Streamlit](https://streamlit.io/) | Lightweight web framework for building interactive UI |
 | **Orchestration** | [LangChain](https://www.langchain.com/) | Framework for building LLM-powered applications |
-| **LLM Model** | [gemini-2.5-flash](https://ai.google.dev/) | Multimodal model optimized for speed and QA |
+| **LLM Model** | [gemini-2.5-flash](https://ai.google.dev/) | Multimodal model optimized for speed, reasoning, and QA |
 | **Embeddings** | [gemini-embedding-2](https://ai.google.dev/) | Generating vector representations of text segments |
 | **Vector DB** | [Chroma](https://www.trychroma.com/) | Light, open-source embedded vector database |
 | **PDF Parser** | [PyPDF](https://pypdf.readthedocs.io/) | Python library for reading PDF documents |
@@ -35,7 +38,7 @@ An AI-powered document assistant that allows users to upload PDF legal documents
 AI Legal Document Assistant/
 ├── backend/
 │   ├── loader_splitter.py  # Loads PDF documents and splits text into chunks
-│   ├── rag.py              # Defines the prompt template, retriever, and QA logic
+│   ├── rag.py              # Prompt templates (rewriter & QA), retriever, and conversational QA logic
 │   └── vector_store.py     # Embeddings initialization and vector database creation
 ├── data/
 │   └── doc.pdf             # Sample directory with a PDF document
@@ -54,8 +57,9 @@ The system implements the **Retrieval-Augmented Generation (RAG)** pipeline as s
 1. **Document Ingestion**: The PDF document is parsed into text pages.
 2. **Text Chunking**: Pages are broken down into chunks of `1000` characters with a `200` character overlap to maintain semantic continuity.
 3. **Vectorization**: Chunks are processed by Google's `gemini-embedding-2` model to produce dense vector representations.
-4. **Retrieval**: When a query is made, Chroma DB queries the vectors using **MMR (Maximal Marginal Relevance)**, prioritizing both relevance and diversity to extract the top 3 segments.
-5. **Contextual QA**: The retrieved segments are fed as context to `gemini-2.5-flash`. The model responds strictly based on the provided context or states if the info is unavailable.
+4. **Conversational Contextualization & Query Rewriting**: When a follow-up query is entered, the session's chat history is compiled. Google Gemini (`gemini-2.5-flash`) rewrites the latest query into a standalone question to resolve references and pronouns (e.g. turning "What is its termination clause?" into "What is the termination clause of the lease agreement?").
+5. **Retrieval**: Chroma DB retrieves relevant document segments using **MMR (Maximal Marginal Relevance)**, prioritizing both relevance and diversity to extract the top 3 segments.
+6. **Contextual & Bound QA**: The retrieved segments and conversational history are fed as context to `gemini-2.5-flash`. The model responds strictly based on the provided context or states if the info is unavailable.
 
 ---
 
