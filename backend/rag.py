@@ -1,6 +1,27 @@
 import streamlit as st
 from langchain_core.prompts import ChatPromptTemplate
 
+rewrite_prompt = ChatPromptTemplate.from_template(
+    """
+    You are an AI assistant that rewrites follow-up questions.
+
+    Given the conversation history and the user's latest question,
+    rewrite the latest question into a standalone question.
+
+    Rules:
+    - Do NOT answer the question.
+    - Preserve the user's original intent.
+    - Resolve pronouns like "it", "they", "this", and "that".
+    - Return only the rewritten question.
+
+    Conversation History:
+    {chat_history}
+
+    Latest Question:
+    {question}
+    """
+)
+
 prompt = ChatPromptTemplate.from_template(
     """
     You are an AI Legal Assistant specializing in legal document analysis.
@@ -23,7 +44,7 @@ prompt = ChatPromptTemplate.from_template(
     {context}
 
     Question:
-    {question}
+    {rewritten_question}
     """
 )
 
@@ -34,13 +55,6 @@ def create_retriever():
     )
 
 def ask_question(question, retriever, llm, chat_history):
-    retrieved_docs = retriever.invoke(question)
-
-    context = "\n\n".join(
-        doc.page_content
-        for doc in retrieved_docs
-    )
-
     history_text = ""
     for message in chat_history:
         if message["role"] == "user":
@@ -48,10 +62,24 @@ def ask_question(question, retriever, llm, chat_history):
         else:
             history_text += f"Assistant: {message['content']}\n"
 
+    rewrite_question = rewrite_prompt.format(
+        chat_history=history_text,
+        question=question
+    )
+
+    rewritten_question = llm.invoke(rewrite_question).content
+
+    retrieved_docs = retriever.invoke(question)
+
+    context = "\n\n".join(
+        doc.page_content
+        for doc in retrieved_docs
+    )
+
     formatted_prompt = prompt.format(
         context=context,
-        question=question,
-        chat_history=chat_history
+        rewritten_question=rewritten_question,
+        chat_history=history_text
     )
 
     response = llm.invoke(formatted_prompt)
