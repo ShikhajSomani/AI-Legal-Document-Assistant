@@ -16,9 +16,11 @@ prompt = ChatPromptTemplate.from_template(
     5. Do not offer legal opinions, recommendations, or advice.
     6. Be factual, concise, and accurate.
 
-    <context>
+    Conversation History:
+    {chat_history}
+
+    Context:
     {context}
-    </context>
 
     Question:
     {question}
@@ -31,7 +33,7 @@ def create_retriever():
         search_kwargs={"k":3}
     )
 
-def ask_question(question, retriever, llm):
+def ask_question(question, retriever, llm, chat_history):
     retrieved_docs = retriever.invoke(question)
 
     context = "\n\n".join(
@@ -39,9 +41,17 @@ def ask_question(question, retriever, llm):
         for doc in retrieved_docs
     )
 
+    history_text = ""
+    for message in chat_history:
+        if message["role"] == "user":
+            history_text += f"User: {message['content']}\n"
+        else:
+            history_text += f"Assistant: {message['content']}\n"
+
     formatted_prompt = prompt.format(
         context=context,
-        question=question
+        question=question,
+        chat_history=chat_history
     )
 
     response = llm.invoke(formatted_prompt)
